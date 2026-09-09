@@ -1,0 +1,326 @@
+---
+/**
+ * index.astro
+ * Configuración general "La cueva del Troll"
+ *
+ * @see https://docs.astro.build/en/basics/pages/
+ */
+
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { supabase } from '../../../lib/supabase';
+
+// Obtener estadísticas del sistema
+const [productsCount, ordersCount, customersCount, categoriesCount] = await Promise.all([
+  supabase.from('products').select('id', { count: 'exact', head: true }),
+  supabase.from('orders').select('id', { count: 'exact', head: true }),
+  supabase.from('customers').select('id', { count: 'exact', head: true }),
+  supabase.from('product_categories').select('id', { count: 'exact', head: true }),
+]);
+
+const systemStats = [
+  { label: 'Productos', value: productsCount.count || 0, icon: '📦' },
+  { label: 'Pedidos', value: ordersCount.count || 0, icon: '🛒' },
+  { label: 'Clientes', value: customersCount.count || 0, icon: '👥' },
+  { label: 'Categorías', value: categoriesCount.count || 0, icon: '🏷️' },
+];
+---
+
+<AdminLayout title="Configuración">
+  <div class="page">
+    <div class="page-header">
+      <div>
+        <h2 class="page-title">⚙️ Configuración</h2>
+        <p class="page-subtitle">Administra tu tienda "La cueva del Troll"</p>
+      </div>
+    </div>
+
+    <!-- System Info Card -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">📊 Estado del sistema</h3>
+      </div>
+      <div class="card-body">
+        <div class="grid-4">
+          {systemStats.map((stat) => (
+            <div class="stat-box">
+              <div class="stat-box-icon">{stat.icon}</div>
+              <div class="stat-box-value">{stat.value}</div>
+              <div class="stat-box-label">{stat.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Settings Links -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">🔗 Configuraciones principales</h3>
+      </div>
+      <div class="card-body">
+        <div class="settings-links-grid">
+          <a href="/admin/settings/payments" class="settings-link-card">
+            <div class="settings-card-icon">💳</div>
+            <div class="settings-card-content">
+              <h4>Pagos</h4>
+              <p>Configura MercadoPago y métodos de pago</p>
+            </div>
+            <span class="settings-card-arrow">→</span>
+          </a>
+
+          <a href="/admin/products" class="settings-link-card">
+            <div class="settings-card-icon">📦</div>
+            <div class="settings-card-content">
+              <h4>Productos</h4>
+              <p>Gestiona el inventario de la cueva</p>
+            </div>
+            <span class="settings-card-arrow">→</span>
+          </a>
+
+          <a href="/admin/categories" class="settings-link-card">
+            <div class="settings-card-icon">🏷️</div>
+            <div class="settings-card-content">
+              <h4>Categorías</h4>
+              <p>Organiza tus productos</p>
+            </div>
+            <span class="settings-card-arrow">→</span>
+          </a>
+
+          <a href="/admin/orders" class="settings-link-card">
+            <div class="settings-card-icon">📋</div>
+            <div class="settings-card-content">
+              <h4>Pedidos</h4>
+              <p>Revisa y gestiona los pedidos</p>
+            </div>
+            <span class="settings-card-arrow">→</span>
+          </a>
+
+          <a href="/admin/customers" class="settings-link-card">
+            <div class="settings-card-icon">👥</div>
+            <div class="settings-card-content">
+              <h4>Clientes</h4>
+              <p>Consulta los guerreros registrados</p>
+            </div>
+            <span class="settings-card-arrow">→</span>
+          </a>
+
+          <a href="/admin/marketing" class="settings-link-card">
+            <div class="settings-card-icon">📢</div>
+            <div class="settings-card-content">
+              <h4>Marketing</h4>
+              <p>Campañas y promociones</p>
+            </div>
+            <span class="settings-card-arrow">→</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Environment Info -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">🔧 Información del entorno</h3>
+      </div>
+      <div class="card-body">
+        <div class="env-grid">
+          <div class="env-item">
+            <span class="env-label">Supabase URL</span>
+            <span class:list={['env-status', 'configured']}>✓ Configurado</span>
+          </div>
+          <div class="env-item">
+            <span class="env-label">Supabase Anon Key</span>
+            <span class:list={['env-status', 'configured']}>✓ Configurado</span>
+          </div>
+          <div class="env-item">
+            <span class="env-label">MercadoPago Token</span>
+            <span class:list={['env-status', import.meta.env.MERCADOPAGO_ACCESS_TOKEN && import.meta.env.MERCADOPAGO_ACCESS_TOKEN !== 'TEST-xxxx-xxxx-xxxx' ? 'configured' : 'pending']}>
+              {import.meta.env.MERCADOPAGO_ACCESS_TOKEN && import.meta.env.MERCADOPAGO_ACCESS_TOKEN !== 'TEST-xxxx-xxxx-xxxx' ? '✓ Configurado' : '⚠ Pendiente'}
+            </span>
+          </div>
+          <div class="env-item">
+            <span class="env-label">Site URL</span>
+            <span class="env-value">{Astro.url.origin}</span>
+          </div>
+        </div>
+        <div class="env-note">
+          <p>Las variables de entorno se configuran en el archivo <code>.env</code> en la raíz del proyecto.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">⚡ Acciones útiles</h3>
+      </div>
+      <div class="card-body">
+        <div class="actions-grid">
+          <a href="/admin/products/new" class="action-btn">
+            <span class="action-icon">➕</span>
+            <span>Nuevo producto</span>
+          </a>
+          <a href="/admin/categories" class="action-btn">
+            <span class="action-icon">🏷️</span>
+            <span>Nueva categoría</span>
+          </a>
+          <a href="/shop" class="action-btn" target="_blank">
+            <span class="action-icon">⚔️</span>
+            <span>Ver tienda</span>
+          </a>
+          <a href="/" class="action-btn" target="_blank">
+            <span class="action-icon">🏠</span>
+            <span>Inicio</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<style>
+  /* Settings Links */
+  .settings-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .setting-link {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-4);
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    text-decoration: none;
+    color: inherit;
+    transition: all var(--transition-fast);
+  }
+
+  .setting-link:hover {
+    border-color: var(--color-primary);
+    background: var(--color-primary-light);
+  }
+
+  .setting-icon {
+    font-size: 1.5rem;
+  }
+
+  .setting-info {
+    flex: 1;
+  }
+
+  .setting-info h4 {
+    margin: 0 0 var(--space-1);
+    font-size: var(--text-base);
+  }
+
+  .setting-info p {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .setting-arrow {
+    color: var(--color-text-muted);
+    transition: transform var(--transition-fast);
+  }
+
+  .setting-link:hover .setting-arrow {
+    transform: translateX(4px);
+    color: var(--color-primary);
+  }
+
+  /* Environment */
+  .env-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+  }
+
+  .env-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-bg-tertiary);
+    border-radius: var(--radius-md);
+  }
+
+  .env-label {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+  }
+
+  .env-value {
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+  }
+
+  .env-value.configured {
+    color: var(--color-success);
+  }
+
+  .env-value.pending {
+    color: var(--color-warning);
+  }
+
+  .env-note {
+    padding: var(--space-3);
+    background: var(--color-bg-tertiary);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .env-note p {
+    margin: 0;
+  }
+
+  .env-note code {
+    font-family: var(--font-mono);
+    background: var(--color-bg);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Actions */
+  .actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--space-3);
+  }
+
+  .action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-4);
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    text-decoration: none;
+    color: var(--color-text);
+    transition: all var(--transition-fast);
+    text-align: center;
+  }
+
+  .action-btn:hover {
+    border-color: var(--color-primary);
+    background: var(--color-primary-light);
+  }
+
+  .action-icon {
+    font-size: 1.5rem;
+  }
+
+  .action-btn span:last-child {
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+  }
+</style>

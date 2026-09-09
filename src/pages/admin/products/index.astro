@@ -1,0 +1,142 @@
+---
+/**
+ * products/index.astro
+ * Gestión de productos temática "La cueva del Troll"
+ *
+ * @see https://docs.astro.build/en/basics/pages/
+ */
+
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { Image } from 'astro:assets';
+import { supabase } from '../../../lib/supabase';
+
+const { data: productsRaw, error } = await supabase
+  .from('products')
+  .select(`
+    id,
+    name,
+    slug,
+    price,
+    stock,
+    status,
+    featured,
+    images,
+    product_categories:category_id ( name )
+  `)
+  .order('created_at', { ascending: false });
+
+const products = productsRaw || [];
+
+function formatPrice(price: number): string {
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+  }).format(price);
+}
+---
+
+<AdminLayout title="Armas del Troll">
+  <div class="page">
+    <div class="page-header">
+      <div>
+        <h2 class="page-title">⚔️ Armas del Troll</h2>
+        <p class="page-subtitle">{products?.length || 0} productos en tu cueva</p>
+      </div>
+      <a href="/admin/products/new" class="btn btn-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        Forjar nuevo producto
+      </a>
+    </div>
+
+    {error && (
+      <div class="alert alert-error">
+        <span>❌ Error al cargar los productos de la cueva.</span>
+      </div>
+    )}
+
+    {!error && products && products.length === 0 && (
+      <div class="empty-state">
+        <div class="empty-icon">📦</div>
+        <h3>La cueva está vacía</h3>
+        <p>Forja tu primer producto para empezar a vender.</p>
+        <a href="/admin/products/new" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Forjar producto
+        </a>
+      </div>
+    )}
+
+    {products && products.length > 0 && (
+      <div class="card">
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Categoría</th>
+                <th>Precio</th>
+                <th>Stock</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {products.map((product) => (
+                <tr>
+                  <td>
+                    <div class="product-cell">
+                      <Image
+                        src={product.images?.[0] || '/placeholder-product.svg'}
+                        alt={product.name || 'Producto'}
+                        class="product-thumb"
+                        width="48"
+                        height="48"
+                        sizes="48px"
+                        loading="lazy"
+                      />
+                      <div class="product-info">
+                        <span class="product-name">{product.name}</span>
+                        <span class="product-slug">SKU: {product.slug}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="category-badge">{(product.product_categories as any)?.name || 'Sin categoría'}</span>
+                  </td>
+                  <td>
+                    <span class="price-value">{formatPrice(product.price)}</span>
+                  </td>
+                  <td>
+                    <span class:list={['badge', product.stock > 5 ? 'badge-success' : product.stock > 0 ? 'badge-warning' : 'badge-danger']}>
+                      {product.stock} unidades
+                    </span>
+                  </td>
+                  <td>
+                    <span class:list={['badge', product.status === 'active' ? 'badge-success' : 'badge-danger']}>
+                      {product.status === 'active' ? '✓ Activo' : '✗ Inactivo'}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="action-links">
+                      <a href={`/admin/products/${product.id}/edit`} class="btn btn-small btn-secondary" title="Editar">
+                        ✎ Editar
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )}
+  </div>
+</AdminLayout>

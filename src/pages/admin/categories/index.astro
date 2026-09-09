@@ -1,0 +1,336 @@
+---
+/**
+ * categories/index.astro
+ * Gestión de categorías de productos.
+ *
+ * @see https://docs.astro.build/en/basics/pages/
+ */
+
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { supabase } from '../../../lib/supabase';
+
+// Obtener categorías con conteo de productos
+const { data: categories, error } = await supabase
+  .from('product_categories')
+  .select(`
+    id,
+    name,
+    slug,
+    description,
+    emoji,
+    sort_order,
+    created_at
+  `)
+  .order('sort_order', { ascending: true });
+
+if (error) {
+  console.error('Error fetching categories:', error);
+}
+---
+
+<AdminLayout title="Categorías">
+  <div class="page">
+    <div class="page-header">
+      <div>
+        <h2 class="page-title">🏷️ Categorías de productos</h2>
+        <p class="page-subtitle">{categories?.length || 0} categorías registradas</p>
+      </div>
+      <button class="btn btn-primary" id="add-category-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        Nueva categoría
+      </button>
+    </div>
+
+    {error && (
+      <div class="alert alert-error">
+        <span>❌ Error al cargar las categorías.</span>
+      </div>
+    )}
+
+    {!error && categories && categories.length === 0 && (
+      <div class="card">
+        <div class="card-body text-center">
+          <div class="empty-state">
+            <div class="empty-icon">🏷️</div>
+            <h3>No hay categorías aún</h3>
+            <p>Las categorías ayudan a organizar tus productos.</p>
+            <button class="btn btn-primary" id="add-category-empty">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              Crear primera categoría
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {categories && categories.length > 0 && (
+      <div class="categories-grid">
+        {categories.map((category) => (
+          <div class="card category-card" data-id={category.id}>
+            <div class="card-header">
+              <h3 class="card-title">
+                {category.emoji && <span class="category-emoji" aria-hidden="true">{(category as any).emoji}</span>}
+                {category.name}
+              </h3>
+              <span class="category-badge">{category.slug}</span>
+            </div>
+            <div class="card-body">
+              {category.description && (
+                <p class="category-description">{category.description}</p>
+              )}
+              <div class="category-meta">
+                <span class="meta-item">Orden: {category.sort_order}</span>
+              </div>
+            </div>
+            <div class="card-footer">
+              <button class="btn btn-small btn-secondary btn-edit" data-id={category.id} data-name={category.name} data-description={category.description || ''} data-emoji={(category as any).emoji || ''} data-sort={category.sort_order}>
+                ✎ Editar
+              </button>
+              <button class="btn btn-small btn-danger btn-delete" data-id={category.id} data-name={category.name}>
+                🗑 Eliminar
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+
+  <!-- Modal para crear/editar categoría -->
+  <dialog class="modal" id="category-modal">
+    <form class="modal-form" id="category-form">
+      <div class="modal-header">
+        <h3 id="modal-title">Nueva categoría</h3>
+        <button type="button" class="modal-close" id="modal-close" aria-label="Cerrar">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" id="category-id" name="category_id" />
+
+        <div class="form-group">
+          <label for="category-name">Nombre *</label>
+          <input
+            type="text"
+            id="category-name"
+            name="name"
+            required
+            placeholder="Ej: Espadas, Escudos, Dragones"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="category-emoji">Emoji</label>
+          <input
+            type="text"
+            id="category-emoji"
+            name="emoji"
+            maxlength="4"
+            placeholder="⚔️"
+            list="emoji-presets"
+          />
+          <datalist id="emoji-presets">
+            {['⚔️','🛡️','🐉','🐲','✨','🏰','🔱','👕','📚','💎','🎨','🎭','📦','🔥','⭐','💀'].map((e) => (
+              <option value={e} />
+            ))}
+          </datalist>
+          <small class="form-hint">Se muestra en la home si la categoría no tiene imagen.</small>
+        </div>
+
+        <div class="form-group">
+          <label for="category-slug">Slug (URL)</label>
+          <input
+            type="text"
+            id="category-slug"
+            name="slug"
+            placeholder="se-genera-automaticamente"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="category-description">Descripción</label>
+          <textarea
+            id="category-description"
+            name="description"
+            rows="3"
+            placeholder="Descripción de la categoría..."
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="category-sort">Orden</label>
+          <input
+            type="number"
+            id="category-sort"
+            name="sort_order"
+            min="0"
+            value="0"
+          />
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="modal-cancel">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar cambios</button>
+      </div>
+    </form>
+  </dialog>
+
+  <style is:global>
+    .category-emoji {
+      font-size: 1.25rem;
+      margin-right: 0.5rem;
+      line-height: 1;
+    }
+
+    .card-title .category-emoji {
+      vertical-align: middle;
+    }
+
+    #category-emoji {
+      font-size: 1.5rem;
+      text-align: center;
+    }
+
+    .form-hint {
+      display: block;
+      margin-top: 0.25rem;
+      font-size: 0.75rem;
+      color: var(--color-text-muted, #8fa294);
+    }
+  </style>
+
+  <script>
+    const modal = document.getElementById('category-modal') as HTMLDialogElement | null;    const form = document.getElementById('category-form') as HTMLFormElement | null;
+    const modalTitle = document.getElementById('modal-title') as HTMLHeadingElement | null;
+    const categoryIdInput = document.getElementById('category-id') as HTMLInputElement | null;
+    const nameInput = document.getElementById('category-name') as HTMLInputElement | null;
+    const slugInput = document.getElementById('category-slug') as HTMLInputElement | null;
+    const descriptionInput = document.getElementById('category-description') as HTMLTextAreaElement | null;
+    const sortInput = document.getElementById('category-sort') as HTMLInputElement | null;
+    const emojiInput = document.getElementById('category-emoji') as HTMLInputElement | null;
+
+    // Open modal for new category
+    document.getElementById('add-category-btn')?.addEventListener('click', () => {
+      if (modalTitle) modalTitle.textContent = 'Nueva categoría';
+      form?.reset();
+      if (categoryIdInput) categoryIdInput.value = '';
+      modal?.showModal();
+    });
+
+    // Open modal for edit
+    document.querySelectorAll('.btn-edit').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        const target = e.currentTarget as HTMLButtonElement;
+        if (modalTitle) modalTitle.textContent = 'Editar categoría';
+        if (categoryIdInput) categoryIdInput.value = target.dataset.id || '';
+        if (nameInput) nameInput.value = target.dataset.name || '';
+        if (emojiInput) emojiInput.value = target.dataset.emoji || '';
+        if (slugInput) slugInput.value = '';
+        if (descriptionInput) descriptionInput.value = target.dataset.description || '';
+        if (sortInput) sortInput.value = target.dataset.sort || '0';
+        modal?.showModal();
+      });
+    });
+
+    // Close modal
+    document.getElementById('modal-close')?.addEventListener('click', () => modal?.close());
+    document.getElementById('modal-cancel')?.addEventListener('click', () => modal?.close());
+
+    // Auto-generate slug
+    nameInput?.addEventListener('input', () => {
+      if (slugInput && (!slugInput.value || slugInput.dataset.autoGenerated === 'true')) {
+        slugInput.value = (nameInput.value || '')
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+        slugInput.dataset.autoGenerated = 'true';
+      }
+    });
+
+    slugInput?.addEventListener('input', () => {
+      if (slugInput) slugInput.dataset.autoGenerated = 'false';
+    });
+
+    // Form submission
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!form) return;
+
+      try {
+        const { createClient } = await import('@supabase/supabase-js');
+        const supabase = createClient(
+          import.meta.env.PUBLIC_SUPABASE_URL,
+          import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+        );
+
+        const formData = new FormData(form);
+        const id = formData.get('category_id') as string;
+
+        const categoryData = {
+          name: formData.get('name') as string,
+          slug: formData.get('slug') as string || (formData.get('name') as string)
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, ''),
+          description: formData.get('description') as string || null,
+          emoji: (formData.get('emoji') as string || '').trim() || null,
+          sort_order: parseInt(formData.get('sort_order') as string) || 0,
+        };
+
+        let result;
+        if (id) {
+          result = await supabase.from('product_categories').update(categoryData).eq('id', id);
+        } else {
+          result = await supabase.from('product_categories').insert(categoryData);
+        }
+
+        if (result.error) throw result.error;
+
+        window.location.reload();
+      } catch (err: any) {
+        alert('Error: ' + err.message);
+      }
+    });
+
+    // Delete category
+    document.querySelectorAll('.btn-delete').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        const target = e.currentTarget as HTMLButtonElement;
+        const id = target.dataset.id;
+        const name = target.dataset.name;
+
+        if (!confirm(`¿Eliminar la categoría "${name}"?`)) {
+          return;
+        }
+
+        try {
+          const { createClient } = await import('@supabase/supabase-js');
+          const supabase = createClient(
+            import.meta.env.PUBLIC_SUPABASE_URL,
+            import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+          );
+
+          const { error } = await supabase.from('product_categories').delete().eq('id', id);
+
+          if (error) throw error;
+
+          window.location.reload();
+        } catch (err: any) {
+          alert('Error al eliminar: ' + err.message);
+        }
+      });
+    });
+  </script>
+</AdminLayout>

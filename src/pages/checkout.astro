@@ -1,0 +1,664 @@
+---
+/**
+ * checkout.astro
+ * Página de checkout con formulario de envío y pasarela de pago.
+ *
+ * @see https://docs.astro.build/en/guides/data-fetching/
+ */
+
+import PageLayout from '../layouts/PageLayout.astro';
+---
+
+<PageLayout
+  title="Checkout | Tienda"
+  description="Completa tu compra"
+>
+  <div class="checkout-container">
+    <header class="checkout-header">
+      <h1>Checkout</h1>
+      <a href="/shop" class="back-link">← Seguir comprando</a>
+    </header>
+
+    <div class="checkout-layout">
+      <form class="checkout-form" id="checkout-form">
+        <section class="checkout-section">
+          <h2>Información de contacto</h2>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="email">Email *</label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                required
+                placeholder="tu@email.com"
+                autocomplete="email"
+              />
+            </div>
+          </div>
+        </section>
+
+        <section class="checkout-section">
+          <h2>Dirección de envío</h2>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="full_name">Nombre completo *</label>
+              <input
+                type="text"
+                id="full_name"
+                name="full_name"
+                required
+                placeholder="Juan Pérez"
+                autocomplete="name"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="phone">Teléfono</label>
+              <input
+                type="tel"
+                id="phone"
+                name="phone"
+                placeholder="555 123 4567"
+                autocomplete="tel"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group full-width">
+              <label for="street_address">Dirección *</label>
+              <input
+                type="text"
+                id="street_address"
+                name="street_address"
+                required
+                placeholder="Calle, número, colonia"
+                autocomplete="street-address"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="city">Ciudad *</label>
+              <input
+                type="text"
+                id="city"
+                name="city"
+                required
+                placeholder="Ciudad de México"
+                autocomplete="address-level2"
+              />
+            </div>
+            <div class="form-group">
+              <label for="state">Estado *</label>
+              <input
+                type="text"
+                id="state"
+                name="state"
+                required
+                placeholder="CDMX"
+                autocomplete="address-level1"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="postal_code">Código postal *</label>
+              <input
+                type="text"
+                id="postal_code"
+                name="postal_code"
+                required
+                placeholder="06600"
+                autocomplete="postal-code"
+              />
+            </div>
+            <div class="form-group">
+              <label for="country">País *</label>
+              <select id="country" name="country" required autocomplete="country">
+                <option value="MX">México</option>
+                <option value="US">Estados Unidos</option>
+                <option value="CO">Colombia</option>
+                <option value="AR">Argentina</option>
+                <option value="CL">Chile</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group full-width">
+              <label for="notes">Notas (opcional)</label>
+              <textarea
+                id="notes"
+                name="notes"
+                rows="2"
+                placeholder="Instrucciones de entrega, referencias..."
+              ></textarea>
+            </div>
+          </div>
+        </section>
+
+        <div class="form-error" id="error-message" hidden>
+          <span id="error-text"></span>
+        </div>
+      </form>
+
+      <aside class="checkout-summary">
+        <div class="summary-card">
+          <h2>Resumen del pedido</h2>
+
+          <div class="summary-items" id="summary-items">
+            <!-- Items rendered by JS -->
+          </div>
+
+          <div class="summary-totals">
+            <div class="summary-row">
+              <span>Subtotal</span>
+              <span id="summary-subtotal">$0.00</span>
+            </div>
+            <div class="summary-row">
+              <span>Envío</span>
+              <span id="summary-shipping">$0.00</span>
+            </div>
+            <div class="summary-row total">
+              <span>Total</span>
+              <span id="summary-total">$0.00</span>
+            </div>
+          </div>
+
+          <div class="payment-methods">
+            <h3>Método de pago</h3>
+            <div class="payment-option selected">
+              <input
+                type="radio"
+                id="payment-mercadopago"
+                name="payment_method"
+                value="mercadopago"
+                checked
+              />
+              <label for="payment-mercadopago">
+                <span class="payment-name">MercadoPago</span>
+                <span class="payment-desc">Tarjeta de crédito, débito o其它</span>
+              </label>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            class="btn-pay"
+            id="btn-pay"
+          >
+            <span class="btn-text">Pagar con MercadoPago</span>
+            <span class="btn-loading" hidden>Procesando...</span>
+          </button>
+
+          <p class="security-note">
+            🔒 Pago seguro procesado por MercadoPago
+          </p>
+        </div>
+      </aside>
+    </div>
+  </div>
+</PageLayout>
+
+<style>
+  .checkout-container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .checkout-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-10);
+  }
+
+  .checkout-header h1 {
+    margin: 0;
+  }
+
+  .back-link {
+    color: var(--color-text-muted);
+    text-decoration: none;
+    font-size: 0.875rem;
+  }
+
+  .back-link:hover {
+    color: var(--color-primary);
+  }
+
+  .checkout-layout {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: var(--space-10);
+    align-items: start;
+  }
+
+  @media (max-width: 900px) {
+    .checkout-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Form */
+  .checkout-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+  }
+
+  .checkout-section {
+    background: #ffffff;
+    border-radius: var(--radius);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: var(--space-8);
+  }
+
+  .checkout-section h2 {
+    margin: 0 0 var(--space-8);
+    font-size: 1.25rem;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-5);
+    margin-bottom: var(--space-5);
+  }
+
+  .form-row:last-child {
+    margin-bottom: 0;
+  }
+
+  .full-width {
+    grid-column: 1 / -1;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .form-group label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #1a1a1a;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    padding: var(--space-4) var(--space-5);
+    border: 1px solid #e5e5e5;
+    border-radius: var(--radius);
+    font-size: 1rem;
+    transition: border-color 0.2s;
+  }
+
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(91, 75, 245, 0.1);
+  }
+
+  .form-error {
+    padding: var(--space-4) var(--space-5);
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: var(--radius);
+    color: #dc2626;
+    font-size: 0.875rem;
+  }
+
+  /* Summary */
+  .summary-card {
+    background: #ffffff;
+    border-radius: var(--radius);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: var(--space-8);
+    position: sticky;
+    top: 80px;
+  }
+
+  .summary-card h2 {
+    margin: 0 0 var(--space-8);
+    font-size: 1.25rem;
+  }
+
+  .summary-items {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: var(--space-8);
+    padding-bottom: var(--space-8);
+    border-bottom: 1px solid #e5e5e5;
+  }
+
+  .summary-item {
+    display: flex;
+    gap: var(--space-5);
+    margin-bottom: var(--space-5);
+  }
+
+  .summary-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .summary-item-image {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: var(--radius);
+    background: #f5f5f5;
+  }
+
+  .summary-item-info {
+    flex: 1;
+  }
+
+  .summary-item-name {
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: var(--space-xs);
+  }
+
+  .summary-item-qty {
+    font-size: 0.75rem;
+    color: #666666;
+  }
+
+  .summary-item-price {
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .summary-totals {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    margin-bottom: var(--space-8);
+  }
+
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.875rem;
+  }
+
+  .summary-row.total {
+    font-size: 1.125rem;
+    font-weight: 700;
+    padding-top: var(--space-4);
+    border-top: 1px solid #e5e5e5;
+  }
+
+  /* Payment */
+  .payment-methods {
+    margin-bottom: var(--space-8);
+  }
+
+  .payment-methods h3 {
+    margin: 0 0 var(--space-5);
+    font-size: 1rem;
+  }
+
+  .payment-option {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-5);
+    border: 2px solid #e5e5e5;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+
+  .payment-option.selected {
+    border-color: var(--color-primary);
+  }
+
+  .payment-option input {
+    margin: 0;
+  }
+
+  .payment-name {
+    font-weight: 500;
+    display: block;
+  }
+
+  .payment-desc {
+    font-size: 0.75rem;
+    color: #666666;
+  }
+
+  .btn-pay {
+    width: 100%;
+    padding: var(--space-5);
+    background: #009ee3;
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .btn-pay:hover:not(:disabled) {
+    background: #0086cc;
+  }
+
+  .btn-pay:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  .security-note {
+    text-align: center;
+    font-size: 0.75rem;
+    color: #666666;
+    margin-top: var(--space-5);
+  }
+</style>
+
+<script>
+  import { getCartState, clearCart } from '../lib/cart';
+  let supabase: any = null;
+
+  async function getSupabase() {
+    if (!supabase) {
+      const { createClient } = await import('@supabase/supabase-js');
+      supabase = createClient(
+        import.meta.env.PUBLIC_SUPABASE_URL,
+        import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+      );
+    }
+    return supabase;
+  }
+
+  let currentUser: any = null;
+
+  const form = document.getElementById('checkout-form') as HTMLFormElement;
+  const summaryItems = document.getElementById('summary-items')!;
+  const subtotalEl = document.getElementById('summary-subtotal')!;
+  const shippingEl = document.getElementById('summary-shipping')!;
+  const totalEl = document.getElementById('summary-total')!;
+  const payBtn = document.getElementById('btn-pay') as HTMLButtonElement;
+  const errorMessage = document.getElementById('error-message') as HTMLDivElement;
+  const errorText = document.getElementById('error-text') as HTMLSpanElement;
+
+  // Auto-fill form for logged in users
+  async function loadUserData() {
+    const client = await getSupabase();
+    const { data: { user } } = await client.auth.getUser();
+    
+    if (user) {
+      currentUser = user;
+      
+      // Auto-fill email
+      const emailInput = document.getElementById('email') as HTMLInputElement;
+      if (emailInput && user.email) {
+        emailInput.value = user.email;
+      }
+      
+      // Auto-fill name from metadata
+      const nameInput = document.getElementById('full_name') as HTMLInputElement;
+      if (nameInput && user.user_metadata?.full_name) {
+        nameInput.value = user.user_metadata.full_name;
+      }
+      
+      // Auto-fill phone from metadata
+      const phoneInput = document.getElementById('phone') as HTMLInputElement;
+      if (phoneInput && user.user_metadata?.phone) {
+        phoneInput.value = user.user_metadata.phone;
+      }
+
+      // Try to load saved address
+      const { data: address } = await client
+        .from('customer_addresses')
+        .select('*')
+        .eq('customer_id', user.id)
+        .eq('is_default', true)
+        .single();
+
+      if (address) {
+        (document.getElementById('street_address') as HTMLInputElement).value = address.street_address || '';
+        (document.getElementById('city') as HTMLInputElement).value = address.city || '';
+        (document.getElementById('state') as HTMLInputElement).value = address.state || '';
+        (document.getElementById('postal_code') as HTMLInputElement).value = address.postal_code || '';
+        (document.getElementById('country') as HTMLSelectElement).value = address.country || 'MX';
+      }
+    }
+  }
+
+  loadUserData();
+
+  function formatPrice(price: number): string {
+    return new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: 'MXN',
+    }).format(price);
+  }
+
+  function renderSummary(): void {
+    const state = getCartState();
+
+    if (state.items.length === 0) {
+      window.location.href = '/shop';
+      return;
+    }
+
+    summaryItems.innerHTML = state.items
+      .map(
+        (item) => `
+        <div class="summary-item">
+          <img src="${item.image || '/placeholder-product.svg'}" alt="${item.name}" class="summary-item-image" width="60" height="60" loading="lazy" />
+          <div class="summary-item-info">
+            <div class="summary-item-name">${item.name}</div>
+            <div class="summary-item-qty">Cant: ${item.quantity}</div>
+          </div>
+          <div class="summary-item-price">${formatPrice(item.price * item.quantity)}</div>
+        </div>
+      `
+      )
+      .join('');
+
+    subtotalEl.textContent = formatPrice(state.total);
+    shippingEl.textContent = '$0.00';
+    totalEl.textContent = formatPrice(state.total);
+  }
+
+  renderSummary();
+
+  // Validate email format
+  function isValidEmail(email: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  // Sanitize input
+  function sanitize(input: string): string {
+    return input
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#x27;');
+  }
+
+  // Payment button
+  payBtn?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    errorMessage.hidden = true;
+
+    // Validate form
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+
+    // Additional validation
+    const email = (document.getElementById('email') as HTMLInputElement).value;
+    if (!isValidEmail(email)) {
+      errorText.textContent = 'Por favor ingresa un email válido.';
+      errorMessage.hidden = false;
+      return;
+    }
+
+    const state = getCartState();
+    if (state.items.length === 0) {
+      errorText.textContent = 'Tu carrito está vacío.';
+      errorMessage.hidden = false;
+      return;
+    }
+
+    payBtn.disabled = true;
+    (payBtn.querySelector('.btn-text') as HTMLElement).hidden = true;
+    (payBtn.querySelector('.btn-loading') as HTMLElement).hidden = false;
+
+    try {
+      // Create preference on server with sanitized data
+      const response = await fetch('/api/mercadopago/create-preference', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: state.items,
+          customer_id: currentUser?.id || null,
+          shipping: {
+            email: sanitize((document.getElementById('email') as HTMLInputElement).value),
+            full_name: sanitize((document.getElementById('full_name') as HTMLInputElement).value),
+            phone: sanitize((document.getElementById('phone') as HTMLInputElement).value),
+            street_address: sanitize((document.getElementById('street_address') as HTMLInputElement).value),
+            city: sanitize((document.getElementById('city') as HTMLInputElement).value),
+            state: sanitize((document.getElementById('state') as HTMLInputElement).value),
+            postal_code: sanitize((document.getElementById('postal_code') as HTMLInputElement).value),
+            country: (document.getElementById('country') as HTMLSelectElement).value,
+          },
+          notes: sanitize((document.getElementById('notes') as HTMLTextAreaElement).value),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      // Redirect to MercadoPago checkout
+      window.location.href = data.init_point;
+    } catch (err: any) {
+      errorText.textContent = err.message || 'Error al procesar el pago.';
+      errorMessage.hidden = false;
+      payBtn.disabled = false;
+      (payBtn.querySelector('.btn-text') as HTMLElement).hidden = false;
+      (payBtn.querySelector('.btn-loading') as HTMLElement).hidden = true;
+    }
+  });
+</script>

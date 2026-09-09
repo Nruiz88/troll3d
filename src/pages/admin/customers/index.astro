@@ -1,0 +1,139 @@
+---
+/**
+ * customers/index.astro
+ * Gestión de clientes en el panel de administración.
+ *
+ * @see https://docs.astro.build/en/basics/pages/
+ */
+
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { supabase } from '../../../lib/supabase';
+
+// Obtener clientes con conteo de pedidos
+const { data: customers, error } = await supabase
+  .from('customers')
+  .select(`
+    id,
+    email,
+    full_name,
+    phone,
+    created_at
+  `)
+  .order('created_at', { ascending: false });
+
+// Obtener conteo de pedidos por cliente
+const { data: orderCounts } = await supabase
+  .from('orders')
+  .select('customer_id, total');
+
+// Calcular stats por cliente
+const customerStats = new Map<string, { orders: number; total: number }>();
+orderCounts?.forEach((order) => {
+  const current = customerStats.get(order.customer_id) || { orders: 0, total: 0 };
+  current.orders++;
+  current.total += order.total || 0;
+  customerStats.set(order.customer_id, current);
+});
+
+if (error) {
+  console.error('Error fetching customers:', error);
+}
+
+function formatPrice(price: number): string {
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+  }).format(price);
+}
+---
+
+<AdminLayout title="Clientes">
+  <div class="page">
+    <div class="page-header">
+      <div>
+        <h2 class="page-title">👥 Clientes guerreros</h2>
+        <p class="page-subtitle">Total registrados: <strong>{customers?.length || 0}</strong></p>
+      </div>
+    </div>
+
+    {error && (
+      <div class="alert alert-error">
+        <span>❌ Error al cargar los clientes.</span>
+      </div>
+    )}
+
+    {!error && customers && customers.length === 0 && (
+      <div class="card">
+        <div class="card-body text-center">
+          <div class="empty-state">
+            <div class="empty-icon">👥</div>
+            <h3>No hay clientes registrados</h3>
+            <p>Los clientes aparecerán cuando se registren en tu tienda.</p>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {customers && customers.length > 0 && (
+      <div class="card">
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Cliente</th>
+                <th>Email</th>
+                <th>Teléfono</th>
+                <th>Pedidos</th>
+                <th>Total gastado</th>
+                <th>Registro</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {customers.map((customer) => {
+                const stats = customerStats.get(customer.id) || { orders: 0, total: 0 };
+                return (
+                  <tr>
+                    <td>
+                      <span class="customer-name-cell">{customer.full_name || 'Sin nombre'}</span>
+                    </td>
+                    <td>
+                      <span class="customer-email-cell">{customer.email}</span>
+                    </td>
+                    <td>
+                      <span class="customer-phone-cell">{customer.phone || '—'}</span>
+                    </td>
+                    <td>
+                      <span class="badge badge-info">{stats.orders}</span>
+                    </td>
+                    <td>
+                      <span class="price-value">{formatPrice(stats.total)}</span>
+                    </td>
+                    <td>
+                      <span class="date-value">
+                        {new Date(customer.created_at).toLocaleDateString('es-ES', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: '2-digit',
+                        })}
+                      </span>
+                    </td>
+                    <td>
+                      <a href={`/admin/customers/${customer.id}`} class="btn btn-small btn-secondary">
+                        Ver →
+                      </a>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )}
+  </div>
+</AdminLayout>
+
+

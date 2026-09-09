@@ -1,0 +1,413 @@
+---
+/**
+ * [id].astro
+ * Detalle de pedido en el panel de administración.
+ * Esta página es server-rendered (prerender = false) para datos dinámicos.
+ *
+ * @see https://docs.astro.build/en/guides/routing/#dynamic-routes
+ */
+
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { Image } from 'astro:assets';
+import { supabase } from '../../../lib/supabase';
+
+const { id } = Astro.params;
+if (!id) return Astro.redirect('/admin/orders');
+
+// Obtener pedido con items y cliente
+const { data: order, error } = await supabase
+  .from('orders')
+  .select(`
+    id,
+    status,
+    subtotal,
+    tax,
+    shipping,
+    total,
+    currency,
+    notes,
+    created_at,
+    updated_at,
+    customers:customer_id (
+      id,
+      email,
+      full_name,
+      phone
+    ),
+    order_items (
+      id,
+      quantity,
+      unit_price,
+      total,
+      products (
+        name,
+        slug,
+        images
+      )
+    )
+  `)
+  .eq('id', id!)
+  .single();
+
+if (error || !order) {
+  return Astro.redirect('/admin/orders');
+}
+
+const statusColors: Record<string, string> = {
+  pending: '#f59e0b',
+  processing: '#3b82f6',
+  shipped: '#8b5cf6',
+  delivered: '#22c55e',
+  cancelled: '#ef4444',
+};
+
+const statusLabels: Record<string, string> = {
+  pending: 'Pendiente',
+  processing: 'Procesando',
+  shipped: 'Enviado',
+  delivered: 'Entregado',
+  cancelled: 'Cancelado',
+};
+---
+
+<AdminLayout title={`Pedido ${order.id.slice(0, 8)}`}>
+  <div class="order-detail">
+    <header class="order-header">
+      <div class="header-left">
+        <a href="/admin/orders" class="back-link">← Volver</a>
+        <h2>Pedido #{order.id.slice(0, 8)}...</h2>
+      </div>
+      <div class="header-right">
+        <select
+          class="status-select"
+          id="status-select"
+          aria-label="Estado del pedido"
+          data-id={order.id}
+          style={`border-color: ${statusColors[order.status]}`}
+        >
+          {Object.entries(statusLabels).map(([value, label]) => (
+            <option value={value} selected={order.status === value}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </div>
+    </header>
+
+    <div class="order-grid">
+      <div class="order-main">
+        <section class="order-section">
+          <h3>Productos</h3>
+          <div class="order-items">
+            {order.order_items?.map((item: any) => (
+              <div class="order-item">
+                <Image
+                  src={item.products?.images?.[0] || '/placeholder-product.svg'}
+                  alt={item.products?.name || 'Producto'}
+                  class="item-image"
+                  width="60"
+                  height="60"
+                  sizes="60px"
+                  loading="lazy"
+                />
+                <div class="item-info">
+                  <a href={`/product/${item.products?.slug}`} class="item-name">
+                    {item.products?.name}
+                  </a>
+                  <span class="item-qty">Cant: {item.quantity}</span>
+                </div>
+                <div class="item-price">
+                  ${item.total?.toFixed(2)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {order.notes && (
+          <section class="order-section">
+            <h3>Notas</h3>
+            <p class="order-notes">{order.notes}</p>
+          </section>
+        )}
+      </div>
+
+      <aside class="order-sidebar">
+        <section class="order-section">
+          <h3>Resumen</h3>
+          <div class="summary-rows">
+            <div class="summary-row">
+              <span>Subtotal</span>
+              <span>${order.subtotal?.toFixed(2)}</span>
+            </div>
+            <div class="summary-row">
+              <span>Envío</span>
+              <span>${order.shipping?.toFixed(2)}</span>
+            </div>
+            <div class="summary-row">
+              <span>Impuestos</span>
+              <span>${order.tax?.toFixed(2)}</span>
+            </div>
+            <div class="summary-row total">
+              <span>Total</span>
+              <span>${order.total?.toFixed(2)} {order.currency}</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="order-section">
+          <h3>Cliente</h3>
+          {order.customers ? (
+            <div class="customer-info">
+              <p><strong>{order.customers[0]?.full_name || 'Sin nombre'}</strong></p>
+              <p>{order.customers[0]?.email}</p>
+              {order.customers[0]?.phone && <p>{order.customers[0]?.phone}</p>}
+            </div>
+          ) : (
+            <p class="no-data">Sin información de cliente</p>
+          )}
+        </section>
+
+        <section class="order-section">
+          <h3>Fechas</h3>
+          <div class="dates-info">
+            <div class="date-row">
+              <span>Creado:</span>
+              <span>{new Date(order.created_at).toLocaleString('es-ES')}</span>
+            </div>
+            <div class="date-row">
+              <span>Actualizado:</span>
+              <span>{new Date(order.updated_at).toLocaleString('es-ES')}</span>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </div>
+</AdminLayout>
+
+<style>
+  .order-detail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+  }
+
+  .order-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-5);
+  }
+
+  .header-left {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    color: var(--color-text-muted);
+    text-decoration: none;
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    transition: color var(--transition-fast);
+  }
+
+  .back-link:hover {
+    color: var(--color-primary);
+  }
+
+  .header-left h2 {
+    margin: 0;
+  }
+
+  .status-select {
+    padding: var(--space-4) var(--space-5);
+    border: 2px solid;
+    border-radius: var(--radius-lg);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    background: var(--color-bg-secondary);
+    color: var(--color-text);
+    cursor: pointer;
+  }
+
+  .order-grid {
+    display: grid;
+    grid-template-columns: 1fr 350px;
+    gap: var(--space-8);
+    align-items: start;
+  }
+
+  @media (max-width: 900px) {
+    .order-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .order-section {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    padding: var(--space-8);
+    margin-bottom: var(--space-8);
+  }
+
+  .order-section h3 {
+    margin: 0 0 var(--space-5);
+    font-size: var(--text-base);
+    font-weight: var(--font-semibold);
+    color: var(--color-text);
+  }
+
+  /* Order Items */
+  .order-items {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+
+  .order-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+    padding-bottom: var(--space-5);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .order-item:last-child {
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+
+  .item-image {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: var(--radius-lg);
+    background: var(--color-bg-tertiary);
+  }
+
+  .item-info {
+    flex: 1;
+  }
+
+  .item-name {
+    font-weight: var(--font-medium);
+    color: var(--color-text);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+  }
+
+  .item-name:hover {
+    color: var(--color-primary);
+  }
+
+  .item-qty {
+    display: block;
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    margin-top: var(--space-xs);
+  }
+
+  .item-price {
+    font-weight: 600;
+  }
+
+  /* Summary */
+  .summary-rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.875rem;
+  }
+
+  .summary-row.total {
+    font-size: var(--text-lg);
+    font-weight: var(--font-bold);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--color-border);
+    color: var(--color-primary);
+  }
+
+  /* Customer */
+  .customer-info p {
+    margin: 0 0 var(--space-xs);
+    font-size: 0.875rem;
+  }
+
+  .no-data {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+
+  /* Notes */
+  .order-notes {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    margin: 0;
+    font-style: italic;
+  }
+
+  /* Dates */
+  .dates-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .date-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+</style>
+
+<script>
+  // Update order status
+  const statusSelect = document.getElementById('status-select') as HTMLSelectElement;
+  statusSelect?.addEventListener('change', async () => {
+    const id = statusSelect.dataset.id;
+    const newStatus = statusSelect.value;
+
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        import.meta.env.PUBLIC_SUPABASE_URL,
+        import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+      );
+
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: newStatus })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Update border color
+      const colors: Record<string, string> = {
+        pending: '#f59e0b',
+        processing: '#3b82f6',
+        shipped: '#8b5cf6',
+        delivered: '#22c55e',
+        cancelled: '#ef4444',
+      };
+      statusSelect.style.borderColor = colors[newStatus] || '#666';
+    } catch (err: any) {
+      alert('Error: ' + err.message);
+      window.location.reload();
+    }
+  });
+</script>

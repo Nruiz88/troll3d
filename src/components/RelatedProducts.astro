@@ -1,0 +1,138 @@
+---
+/**
+ * RelatedProducts.astro
+ * Muestra productos relacionados de la misma categoría
+ * 
+ * @see https://docs.astro.build/en/basics/astro-components/
+ */
+
+import ProductCard from './ProductCard.astro';
+import { supabase } from '../lib/supabase';
+
+interface Props {
+  categoryId?: string | null;
+  currentProductId: string;
+  limit?: number;
+}
+
+const { categoryId, currentProductId, limit = 4 } = Astro.props;
+
+let relatedProducts: any[] = [];
+
+if (categoryId) {
+  const { data } = await supabase
+    .from('products')
+    .select(`
+      id,
+      name,
+      slug,
+      price,
+      compare_price,
+      short_description,
+      images,
+      featured
+    `)
+    .eq('category_id', categoryId)
+    .eq('status', 'active')
+    .neq('id', currentProductId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  relatedProducts = data || [];
+}
+
+// Si no hay suficientes productos de la misma categoría, buscar otros destacados
+if (relatedProducts.length < limit) {
+  const { data } = await supabase
+    .from('products')
+    .select(`
+      id,
+      name,
+      slug,
+      price,
+      compare_price,
+      short_description,
+      images,
+      featured
+    `)
+    .eq('status', 'active')
+    .neq('id', currentProductId)
+    .not('id', 'in', `(${relatedProducts.map(p => p.id).join(',')})`)
+    .eq('featured', true)
+    .order('created_at', { ascending: false })
+    .limit(limit - relatedProducts.length);
+
+  relatedProducts = [...relatedProducts, ...(data || [])];
+}
+---
+
+{relatedProducts.length > 0 && (
+  <section class="related-products">
+    <div class="section-header">
+      <h2 class="section-title">⚔️ Otros guerreros compraron</h2>
+      <a href="/shop" class="see-all">Ver tienda →</a>
+    </div>
+    <div class="products-grid">
+      {relatedProducts.map((product) => (
+        <ProductCard
+          id={product.id}
+          name={product.name}
+          slug={product.slug}
+          price={product.price}
+          comparePrice={product.compare_price}
+          shortDescription={product.short_description}
+          images={product.images}
+          featured={product.featured}
+        />
+      ))}
+    </div>
+  </section>
+)}
+
+<style>
+  .related-products {
+    margin-top: var(--space-16);
+    padding-top: var(--space-12);
+    border-top: 1px solid var(--color-border);
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-8);
+  }
+
+  .section-title {
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    font-weight: var(--font-bold);
+    color: var(--color-text);
+    margin: 0;
+  }
+
+  .see-all {
+    font-size: var(--text-sm);
+    color: var(--color-primary);
+    text-decoration: none;
+    font-weight: var(--font-medium);
+    transition: all var(--transition-fast);
+  }
+
+  .see-all:hover {
+    text-decoration: underline;
+  }
+
+  .products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--space-6);
+  }
+
+  @media (max-width: 640px) {
+    .products-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-4);
+    }
+  }
+</style>

@@ -1,0 +1,507 @@
+---
+/**
+ * shop.astro
+ * Página de tienda con búsqueda y filtros.
+ *
+ * @see https://docs.astro.build/en/guides/data-fetching/
+ */
+
+import PageLayout from '../layouts/PageLayout.astro';
+import ProductCardV2 from '../components/ProductCardV2.astro';
+import { supabase } from '../lib/supabase';
+
+// Get category filter from URL
+const categorySlug = Astro.url.searchParams.get('category');
+const searchQuery = Astro.url.searchParams.get('q');
+const page = parseInt(Astro.url.searchParams.get('page') || '1');
+const perPage = 12;
+const offset = (page - 1) * perPage;
+
+// Build query
+let query = supabase
+  .from('products')
+  .select(`
+    id,
+    name,
+    slug,
+    price,
+    compare_price,
+    short_description,
+    images,
+    featured,
+    stock,
+    status,
+    product_categories:category_id (
+      name,
+      slug
+    )
+  `)
+  .eq('status', 'active');
+
+// Apply category filter
+if (categorySlug) {
+  const { data: category } = await supabase
+    .from('product_categories')
+    .select('id')
+    .eq('slug', categorySlug)
+    .single();
+
+  if (category) {
+    query = query.eq('category_id', category.id);
+  }
+}
+
+// Apply search filter
+if (searchQuery) {
+  query = query.or(`name.ilike.%${searchQuery}%,short_description.ilike.%${searchQuery}%`);
+}
+
+// Get total count for pagination
+const { count: totalProducts } = await supabase
+  .from('products')
+  .select('*', { count: 'exact', head: true })
+  .eq('status', 'active');
+
+// Execute query with pagination
+const { data: products, error } = await query
+  .order('featured', { ascending: false })
+  .order('created_at', { ascending: false })
+  .range(offset, offset + perPage - 1);
+
+// Calculate pagination
+const totalPages = Math.ceil((totalProducts || 0) / perPage);
+
+// Get categories for filters
+const { data: categories } = await supabase
+  .from('product_categories')
+  .select('id, name, slug')
+  .order('sort_order', { ascending: true });
+
+if (error) {
+  console.error('Error fetching products:', error);
+}
+
+// Pre-compute pagination numbers to avoid complex expressions in JSX
+function getPageNumbers(currentPage: number, total: number): number[] {
+  const pages: number[] = [];
+  for (let i = 0; i < Math.min(5, total); i++) {
+    let pageNum: number;
+    if (total <= 5) {
+      pageNum = i + 1;
+    } else if (currentPage <= 3) {
+      pageNum = i + 1;
+    } else if (currentPage >= total - 2) {
+      pageNum = total - 4 + i;
+    } else {
+      pageNum = currentPage - 2 + i;
+    }
+    pages.push(pageNum);
+  }
+  return pages;
+}
+
+const pageNumbers = getPageNumbers(page, totalPages);
+---
+
+<PageLayout
+  title="Tienda | Astro"
+  description="Explora nuestros productos."
+>
+  <section class="shop" transition:animate="fade">
+    <header class="shop-header">
+      <h1>Tienda</h1>
+      <p class="shop-lead">
+        Explora nuestra colección de productos.
+      </p>
+    </header>
+
+    <!-- Search Bar -->
+    <div class="search-container">
+      <form class="search-form" action="/shop" method="get">
+        {categorySlug && <input type="hidden" name="category" value={categorySlug} />}
+        <input
+          type="search"
+          name="q"
+          placeholder="Buscar productos..."
+          value={searchQuery || ''}
+          class="search-input"
+          aria-label="Buscar productos"
+        />
+        <button type="submit" class="search-btn" aria-label="Buscar">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </button>
+      </form>
+    </div>
+
+    <!-- Category Filters -->
+    {categories && categories.length > 0 && (
+      <nav class="shop-filters" aria-label="Filtrar por categoría">
+        <a
+          href="/shop"
+          class:list={['filter-btn', { active: !categorySlug }]}
+        >
+          Todos
+        </a>
+        {categories.map((cat) => (
+          <a
+            href={`/shop?category=${cat.slug}${searchQuery ? `&q=${searchQuery}` : ''}`}
+            class:list={['filter-btn', { active: categorySlug === cat.slug }]}
+          >
+            {cat.name}
+          </a>
+        ))}
+      </nav>
+    )}
+
+    <!-- Active Filters -->
+    {(searchQuery || categorySlug) && (
+      <div class="active-filters">
+        <span>Filtros activos:</span>
+        {searchQuery && (
+          <span class="filter-tag">
+            Búsqueda: "{searchQuery}"
+            <a href={`/shop${categorySlug ? `?category=${categorySlug}` : ''}`}>×</a>
+          </span>
+        )}
+        {categorySlug && (
+          <span class="filter-tag">
+            Categoría: {categories?.find(c => c.slug === categorySlug)?.name}
+            <a href={`/shop${searchQuery ? `?q=${searchQuery}` : ''}`}>×</a>
+          </span>
+        )}
+        <a href="/shop" class="clear-filters">Limpiar todo</a>
+      </div>
+    )}
+
+    <section class="shop-content">
+      {error && (
+        <div class="shop-empty">
+          <p>Error al cargar los productos. Intenta de nuevo más tarde.</p>
+        </div>
+      )}
+
+      {!error && products && products.length === 0 && (
+        <div class="shop-empty">
+          <p>{searchQuery ? `No se encontraron resultados para "${searchQuery}"` : 'No hay productos disponibles aún.'}</p>
+          {(searchQuery || categorySlug) && (
+            <a href="/shop" class="btn-clear">Ver todos los productos</a>
+          )}
+        </div>
+      )}
+
+      {products && products.length > 0 && (
+        <Fragment>
+          <p class="results-count">{totalProducts} producto{totalProducts !== 1 ? 's' : ''}</p>
+          <div class="products-grid">
+            {products.map((product) => (
+              <ProductCardV2
+                id={product.id}
+                name={product.name}
+                slug={product.slug}
+                price={product.price}
+                comparePrice={product.compare_price}
+                shortDescription={product.short_description}
+                images={product.images}
+                featured={product.featured}
+                stock={product.stock}
+                category={(Array.isArray(product.product_categories) ? product.product_categories[0]?.name : (product.product_categories as any)?.name) ?? undefined}
+              />
+            ))}
+          </div>
+
+          <!-- Pagination -->
+          {totalPages > 1 && (
+            <nav class="pagination" aria-label="Paginación">
+              {page > 1 && (
+                <a 
+                  href={`/shop?page=${page - 1}${categorySlug ? `&category=${categorySlug}` : ''}${searchQuery ? `&q=${searchQuery}` : ''}`}
+                  class="pagination-btn"
+                >
+                  ← Anterior
+                </a>
+              )}
+
+              <div class="pagination-numbers">
+                {pageNumbers.map((pageNum) => {
+                  const url = `/shop?page=${pageNum}${categorySlug ? `&category=${categorySlug}` : ''}${searchQuery ? `&q=${searchQuery}` : ''}`;
+                  return (
+                    <a 
+                      href={url}
+                      class:list={['pagination-num', { active: pageNum === page }]}
+                    >
+                      {pageNum}
+                    </a>
+                  );
+                })}
+              </div>
+
+              {page < totalPages && (
+                <a 
+                  href={`/shop?page=${page + 1}${categorySlug ? `&category=${categorySlug}` : ''}${searchQuery ? `&q=${searchQuery}` : ''}`}
+                  class="pagination-btn"
+                >
+                  Siguiente →
+                </a>
+              )}
+            </nav>
+          )}
+        </Fragment>
+      )}
+    </section>
+  </section>
+</PageLayout>
+
+<style>
+  .shop {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .shop-header {
+    text-align: center;
+    margin-bottom: var(--space-10);
+  }
+
+  .shop-header h1 {
+    margin-bottom: var(--space-4);
+  }
+
+  .shop-lead {
+    font-size: 1.25rem;
+    color: var(--color-text-muted);
+    margin: 0;
+  }
+
+  /* Search */
+  .search-container {
+    max-width: 500px;
+    margin: 0 auto var(--space-10);
+  }
+
+  .search-form {
+    display: flex;
+    gap: var(--space-4);
+  }
+
+  .search-input {
+    flex: 1;
+    padding: var(--space-4) var(--space-5);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    font-size: 1rem;
+    background: var(--color-bg);
+    color: var(--color-text);
+  }
+
+  .search-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(91, 75, 245, 0.1);
+  }
+
+  .search-btn {
+    padding: var(--space-4) var(--space-5);
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+  }
+
+  .search-btn:hover {
+    background: var(--color-primary-hover);
+  }
+
+  /* Filters */
+  .shop-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    justify-content: center;
+    margin-bottom: var(--space-8);
+  }
+
+  .filter-btn {
+    display: inline-block;
+    padding: var(--space-xs) var(--space-5);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    text-decoration: none;
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+    transition: all 0.2s;
+  }
+
+  .filter-btn:hover,
+  .filter-btn.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: white;
+    text-decoration: none;
+  }
+
+  /* Active Filters */
+  .active-filters {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-8);
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+  }
+
+  .filter-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-4);
+    background: var(--color-bg-hover);
+    border-radius: var(--radius);
+  }
+
+  .filter-tag a {
+    color: var(--color-text-muted);
+    text-decoration: none;
+    font-weight: bold;
+  }
+
+  .filter-tag a:hover {
+    color: var(--color-primary);
+  }
+
+  .clear-filters {
+    color: var(--color-primary);
+    text-decoration: none;
+    margin-left: auto;
+  }
+
+  .clear-filters:hover {
+    text-decoration: underline;
+  }
+
+  /* Results */
+  .results-count {
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+    margin-bottom: var(--space-5);
+  }
+
+  .shop-empty {
+    text-align: center;
+    padding: var(--space-10);
+    border: 2px dashed var(--color-border);
+    border-radius: var(--radius);
+  }
+
+  .shop-empty p {
+    margin: 0 0 var(--space-4);
+  }
+
+  .btn-clear {
+    display: inline-block;
+    margin-top: var(--space-4);
+    padding: var(--space-4) var(--space-5);
+    background: var(--color-primary);
+    color: white;
+    text-decoration: none;
+    border-radius: var(--radius);
+    font-size: 0.875rem;
+  }
+
+  .products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: var(--space-8);
+  }
+
+  @media (max-width: 640px) {
+    .products-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-5);
+    }
+  }
+
+  /* Pagination */
+  .pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-12);
+    padding-top: var(--space-8);
+    border-top: 1px solid var(--color-border);
+  }
+
+  .pagination-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-5);
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    color: var(--color-text);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    text-decoration: none;
+    transition: all var(--transition-fast);
+  }
+
+  .pagination-btn:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  .pagination-numbers {
+    display: flex;
+    gap: var(--space-1);
+  }
+
+  .pagination-num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    color: var(--color-text);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    text-decoration: none;
+    transition: all var(--transition-fast);
+  }
+
+  .pagination-num:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  .pagination-num.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: white;
+  }
+
+  @media (max-width: 640px) {
+    .pagination {
+      flex-wrap: wrap;
+    }
+
+    .pagination-numbers {
+      order: -1;
+      width: 100%;
+      justify-content: center;
+      margin-bottom: var(--space-4);
+    }
+  }
+</style>

@@ -1,0 +1,249 @@
+---
+/**
+ * SocialProof.astro
+ * Prueba social: visitantes en vivo, compras recientes, confianza
+ * 
+ * @see https://www.nngroup.com/articles/social-proof-ux/
+ */
+---
+
+<div class="social-proof-section">
+  <!-- Trust Badges -->
+  <div class="trust-badges">
+    <div class="trust-badge">
+      <span class="badge-icon">🔒</span>
+      <span class="badge-text">Pago 100% seguro</span>
+    </div>
+    <div class="trust-badge">
+      <span class="badge-icon">🚚</span>
+      <span class="badge-text">Envío gratis +$500</span>
+    </div>
+    <div class="trust-badge">
+      <span class="badge-icon">↩️</span>
+      <span class="badge-text">30 días de garantía</span>
+    </div>
+    <div class="trust-badge">
+      <span class="badge-icon">⭐</span>
+      <span class="badge-text">4.9/5 en reseñas</span>
+    </div>
+  </div>
+
+  <!-- Live Visitors -->
+  <div class="live-visitors" id="live-visitors">
+    <span class="live-dot"></span>
+    <span class="visitor-text">
+      <strong id="visitor-count">23</strong> guerreros en la cueva ahora
+    </span>
+  </div>
+
+  <!-- Recent Purchases -->
+  <div class="recent-purchases" id="recent-purchases">
+    <div class="purchase-item" id="purchase-1">
+      <span class="purchase-avatar">👹</span>
+      <span class="purchase-text">
+        <strong>Carlos M.</strong> compró <em> Espada del Troll</em>
+      </span>
+      <span class="purchase-time">hace 2 min</span>
+    </div>
+  </div>
+</div>
+
+<style>
+  .social-proof-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    padding: var(--space-8) 0;
+  }
+
+  /* Trust Badges */
+  .trust-badges {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-4);
+  }
+
+  .trust-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--space-4);
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    text-align: center;
+    transition: all var(--transition-fast);
+  }
+
+  .trust-badge:hover {
+    border-color: var(--color-primary);
+    transform: translateY(-2px);
+  }
+
+  .badge-icon {
+    font-size: 1.25rem;
+  }
+
+  .badge-text {
+    font-size: var(--text-xs);
+    font-weight: var(--font-semibold);
+    color: var(--color-text);
+  }
+
+  /* Live Visitors */
+  .live-visitors {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full);
+  }
+
+  .live-dot {
+    width: 10px;
+    height: 10px;
+    background: #22c55e;
+    border-radius: var(--radius-full);
+    animation: pulse-dot 2s infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% {
+      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
+    }
+    50% {
+      box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
+    }
+  }
+
+  .visitor-text {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .visitor-text strong {
+    color: var(--color-primary);
+    font-weight: var(--font-bold);
+  }
+
+  /* Recent Purchases */
+  .recent-purchases {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .purchase-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full);
+    animation: slideIn 0.5s ease;
+  }
+
+  .purchase-avatar {
+    font-size: 1.25rem;
+  }
+
+  .purchase-text {
+    flex: 1;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .purchase-text strong {
+    color: var(--color-text);
+    font-weight: var(--font-medium);
+  }
+
+  .purchase-text em {
+    color: var(--color-primary);
+    font-style: normal;
+    font-weight: var(--font-medium);
+  }
+
+  .purchase-time {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    white-space: nowrap;
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .trust-badges {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 480px) {
+    .trust-badges {
+      grid-template-columns: 1fr;
+    }
+
+    .badge-text {
+      font-size: 11px;
+    }
+  }
+</style>
+
+<script>
+  // Simulated live visitors (replace with real analytics)
+  function updateVisitorCount() {
+    const count = Math.floor(Math.random() * 15) + 15; // 15-30 visitors
+    const el = document.getElementById('visitor-count');
+    if (el) el.textContent = count.toString();
+  }
+
+  // Simulated recent purchases
+  const names = ['Carlos M.', 'Ana L.', 'Pedro R.', 'María G.', 'Juan P.', 'Laura S.', 'Diego F.', 'Sofía V.'];
+  const products = [' Espada del Troll', ' Armadura Oscura', ' Poción de Fuerza', ' Escudo Ancestral', ' Amuleto de la Cueva', ' Capa de Invisibilidad'];
+  
+  function addPurchase() {
+    const container = document.getElementById('recent-purchases');
+    if (!container) return;
+    
+    const name = names[Math.floor(Math.random() * names.length)];
+    const product = products[Math.floor(Math.random() * products.length)];
+    
+    const item = document.createElement('div');
+    item.className = 'purchase-item';
+    item.innerHTML = `
+      <span class="purchase-avatar">👹</span>
+      <span class="purchase-text">
+        <strong>${name}</strong> compró <em>${product}</em>
+      </span>
+      <span class="purchase-time">ahora</span>
+    `;
+    
+    container.insertBefore(item, container.firstChild);
+    
+    // Keep only last 3
+    while (container.children.length > 3) {
+      container.removeChild(container.lastChild!);
+    }
+  }
+
+  // Update visitor count periodically
+  updateVisitorCount();
+  setInterval(updateVisitorCount, 30000);
+
+  // Add random purchase every 15-45 seconds
+  setInterval(addPurchase, Math.random() * 30000 + 15000);
+</script>

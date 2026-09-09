@@ -1,0 +1,99 @@
+---
+/**
+ * pending.astro
+ * Página de pago pendiente (ej: transferencia bancaria).
+ *
+ * @see https://docs.astro.build/en/basics/pages/
+ */
+
+import PageLayout from '../../layouts/PageLayout.astro';
+
+const orderId = Astro.url.searchParams.get('order');
+---
+
+<PageLayout
+  title="Pago pendiente | Tienda"
+  description="Tu pago está siendo procesado."
+>
+  <div class="result-container">
+    <div class="result-card">
+      <div class="result-icon">⏳</div>
+      <h1>Pago pendiente</h1>
+      <p class="result-message">
+        Tu pago está siendo procesado. Te notificaremos cuando se confirme.
+      </p>
+
+      {orderId && (
+        <div class="order-info">
+          <p><strong>Número de pedido:</strong></p>
+          <p class="order-id">{orderId}</p>
+        </div>
+      )}
+
+      <div class="result-actions">
+        <a href="/shop" class="btn-primary">Seguir comprando</a>
+      </div>
+    </div>
+  </div>
+</PageLayout>
+
+<style>
+  .result-container {
+    min-height: 60vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .result-card {
+    max-width: 500px;
+    text-align: center;
+    padding: var(--space-10);
+    background: #ffffff;
+    border-radius: var(--radius);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .result-icon {
+    font-size: 4rem;
+    margin-bottom: var(--space-5);
+  }
+
+  .result-card h1 {
+    margin: 0 0 var(--space-5);
+    color: #f59e0b;
+  }
+
+  .result-message {
+    color: #666666;
+    margin-bottom: var(--space-8);
+  }
+
+  .order-info {
+    padding: var(--space-5);
+    background: #f8f9fa;
+    border-radius: var(--radius);
+    margin-bottom: var(--space-8);
+  }
+
+  .order-id {
+    font-family: monospace;
+    font-size: 1.125rem;
+    color: var(--color-primary);
+    margin: var(--space-4) 0 0;
+  }
+
+  .result-actions {
+    display: flex;
+    justify-content: center;
+  }
+
+  .btn-primary {
+    padding: var(--space-4) var(--space-8);
+    background: var(--color-primary);
+    color: white;
+    text-decoration: none;
+    border-radius: var(--radius);
+    font-weight: 500;
+  }
+</style>

@@ -1,0 +1,49 @@
+---
+/**
+ * PageLayout.astro
+ * Layout de página completo con Header, Footer y Carrito.
+ * Extiende BaseLayout para agregar estructura de navegación.
+ *
+ * @see https://docs.astro.build/en/basics/layouts/
+ */
+
+import BaseLayout from './BaseLayout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import CartDrawer from '../components/CartDrawer.astro';
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+}
+
+const { title, description, image } = Astro.props;
+---
+
+<BaseLayout title={title} description={description} image={image}>
+  <div class="page">
+    <Header />
+    <main class="main">
+      <slot />
+    </main>
+    <Footer />
+    <CartDrawer />
+  </div>
+</BaseLayout>
+
+<style>
+  .page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  .main {
+    flex: 1;
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: var(--space-8) var(--space-5);
+    width: 100%;
+  }
+</style>

@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0f0d"/>
+      <stop offset="50%" style="stop-color:#1a2f1a"/>
+      <stop offset="100%" style="stop-color:#0a0f0d"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#4caf50"/>
+      <stop offset="50%" style="stop-color:#ff5722"/>
+      <stop offset="100%" style="stop-color:#4caf50"/>
+    </linearGradient>
+    <filter id="blur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="40"/>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="600" fill="url(#bg)"/>
+  
+  <!-- Decorative elements -->
+  <circle cx="200" cy="300" r="150" fill="#4caf50" opacity="0.05" filter="url(#blur)"/>
+  <circle cx="1000" cy="200" r="200" fill="#ff5722" opacity="0.05" filter="url(#blur)"/>
+  <circle cx="600" cy="500" r="180" fill="#4caf50" opacity="0.03" filter="url(#blur)"/>
+  
+  <!-- Grid pattern -->
+  <g opacity="0.03" stroke="#4caf50" stroke-width="1">
+    <line x1="0" y1="100" x2="1200" y2="100"/>
+    <line x1="0" y1="200" x2="1200" y2="200"/>
+    <line x1="0" y1="300" x2="1200" y2="300"/>
+    <line x1="0" y1="400" x2="1200" y2="400"/>
+    <line x1="0" y1="500" x2="1200" y2="500"/>
+    <line x1="200" y1="0" x2="200" y2="600"/>
+    <line x1="400" y1="0" x2="400" y2="600"/>
+    <line x1="600" y1="0" x2="600" y2="600"/>
+    <line x1="800" y1="0" x2="800" y2="600"/>
+    <line x1="1000" y1="0" x2="1000" y2="600"/>
+  </g>
+  
+  <!-- Product silhouettes -->
+  <g opacity="0.1">
+    <!-- Figura 1 -->
+    <path d="M900 350 L920 280 L940 350 Z" fill="#4caf50"/>
+    <circle cx="920" cy="270" r="15" fill="#4caf50"/>
+    
+    <!-- Figura 2 -->
+    <path d="M1000 380 L1020 300 L1040 380 Z" fill="#ff5722"/>
+    <circle cx="1020" cy="290" r="15" fill="#ff5722"/>
+    
+    <!-- Figura 3 -->
+    <rect x="850" y="320" width="40" height="60" rx="5" fill="#4caf50" opacity="0.5"/>
+  </g>
+  
+  <!-- Accent line -->
+  <rect x="100" y="350" width="200" height="4" rx="2" fill="url(#glow)"/>
+</svg>

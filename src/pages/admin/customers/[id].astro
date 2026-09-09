@@ -1,0 +1,366 @@
+---
+/**
+ * [id].astro
+ * Detalle de cliente en el panel de administración.
+ *
+ * @see https://docs.astro.build/en/guides/routing/#dynamic-routes
+ */
+
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { supabase } from '../../../lib/supabase';
+
+const { id } = Astro.params;
+if (!id) return Astro.redirect('/admin/customers');
+
+// Obtener cliente
+const { data: customer, error: customerError } = await supabase
+  .from('customers')
+  .select(`
+    id,
+    email,
+    full_name,
+    phone,
+    created_at,
+    updated_at
+  `)
+  .eq('id', id!)
+  .single();
+
+if (customerError || !customer) {
+  return Astro.redirect('/admin/customers');
+}
+
+// Obtener pedidos del cliente
+const { data: orders } = await supabase
+  .from('orders')
+  .select(`
+    id,
+    status,
+    total,
+    created_at
+  `)
+  .eq('customer_id', id)
+  .order('created_at', { ascending: false });
+
+// Obtener direcciones del cliente
+const { data: addresses } = await supabase
+  .from('customer_addresses')
+  .select('*')
+  .eq('customer_id', id);
+
+const statusColors: Record<string, string> = {
+  pending: '#f59e0b',
+  processing: '#3b82f6',
+  shipped: '#8b5cf6',
+  delivered: '#22c55e',
+  cancelled: '#ef4444',
+};
+
+function formatPrice(price: number): string {
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+  }).format(price);
+}
+
+const totalSpent = orders?.reduce((sum, order) => sum + (order.total || 0), 0) || 0;
+const totalOrders = orders?.length || 0;
+---
+
+<AdminLayout title={`Cliente: ${customer.full_name || customer.email}`}>
+  <div class="customer-detail">
+    <header class="page-header">
+      <div class="header-left">
+        <a href="/admin/customers" class="back-link">← Volver</a>
+        <h2>{customer.full_name || 'Sin nombre'}</h2>
+        <p class="customer-email">{customer.email}</p>
+      </div>
+    </header>
+
+    <div class="customer-grid">
+      <!-- Stats -->
+      <div class="customer-stats">
+        <div class="stat-card">
+          <span class="stat-value">{totalOrders}</span>
+          <span class="stat-label">Pedidos</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">{formatPrice(totalSpent)}</span>
+          <span class="stat-label">Total gastado</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">
+            {new Date(customer.created_at).toLocaleDateString('es-ES')}
+          </span>
+          <span class="stat-label">Cliente desde</span>
+        </div>
+      </div>
+
+      <!-- Orders -->
+      <section class="customer-section">
+        <h3>Historial de pedidos</h3>
+        {orders && orders.length > 0 ? (
+          <div class="orders-list">
+            {orders.map((order) => (
+              <a href={`/admin/orders/${order.id}`} class="order-item">
+                <div class="order-info">
+                  <span class="order-id">#{order.id.slice(0, 8)}...</span>
+                  <span class="order-date">
+                    {new Date(order.created_at).toLocaleDateString('es-ES')}
+                  </span>
+                </div>
+                <div class="order-meta">
+                  <span class="order-total">{formatPrice(order.total || 0)}</span>
+                  <span
+                    class="status-badge"
+                    style={`background-color: ${statusColors[order.status]}`}
+                  >
+                    {order.status}
+                  </span>
+                </div>
+              </a>
+            ))}
+          </div>
+        ) : (
+          <p class="no-data">No hay pedidos.</p>
+        )}
+      </section>
+
+      <!-- Addresses -->
+      <section class="customer-section">
+        <h3>Direcciones</h3>
+        {addresses && addresses.length > 0 ? (
+          <div class="addresses-list">
+            {addresses.map((addr) => (
+              <div class="address-card">
+                <div class="address-header">
+                  <span class="address-label">{addr.label}</span>
+                  {addr.is_default && <span class="default-badge">Principal</span>}
+                </div>
+                <p class="address-text">
+                  {addr.street_address}<br />
+                  {addr.city}, {addr.state} {addr.postal_code}<br />
+                  {addr.country}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p class="no-data">No hay direcciones registradas.</p>
+        )}
+      </section>
+
+      <!-- Contact Info -->
+      <section class="customer-section">
+        <h3>Información de contacto</h3>
+        <div class="contact-info">
+          <div class="info-row">
+            <span class="info-label">Email:</span>
+            <span class="info-value">{customer.email}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Teléfono:</span>
+            <span class="info-value">{customer.phone || 'No proporcionado'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Última actualización:</span>
+            <span class="info-value">
+              {new Date(customer.updated_at).toLocaleString('es-ES')}
+            </span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</AdminLayout>
+
+<style>
+  .customer-detail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+  }
+
+  .page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    margin-bottom: var(--space-4);
+    color: var(--color-text-muted);
+    text-decoration: none;
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    transition: color var(--transition-fast);
+  }
+
+  .back-link:hover {
+    color: var(--color-primary);
+  }
+
+  .header-left h2 {
+    margin: 0 0 var(--space-xs);
+    color: var(--color-text);
+  }
+
+  .customer-email {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+
+  /* Stats */
+  .customer-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-5);
+    margin-bottom: var(--space-8);
+  }
+
+  /* Sections */
+  .customer-section {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    padding: var(--space-8);
+    margin-bottom: var(--space-8);
+  }
+
+  .customer-section h3 {
+    margin: 0 0 var(--space-5);
+    font-size: var(--text-base);
+    font-weight: var(--font-semibold);
+    color: var(--color-text);
+  }
+
+  /* Orders */
+  .orders-list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .order-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-4) 0;
+    border-bottom: 1px solid var(--color-border);
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .order-item:last-child {
+    border-bottom: none;
+  }
+
+  .order-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .order-id {
+    font-family: monospace;
+    font-weight: var(--font-medium);
+    color: var(--color-primary);
+  }
+
+  .order-date {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+  }
+
+  .order-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+  }
+
+  .order-total {
+    font-weight: 600;
+  }
+
+  /* Addresses */
+  .addresses-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: var(--space-5);
+  }
+
+  .address-card {
+    padding: var(--space-5);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-bg-tertiary);
+  }
+
+  .address-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+  }
+
+  .address-label {
+    font-weight: 500;
+  }
+
+  .default-badge {
+    font-size: var(--text-xs);
+    background: var(--color-success-light);
+    color: var(--color-success);
+    padding: 0.125rem 0.5rem;
+    border-radius: var(--radius-full);
+    font-weight: var(--font-semibold);
+  }
+
+  .address-text {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    line-height: 1.5;
+  }
+
+  /* Contact */
+  .contact-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .info-row {
+    display: flex;
+    gap: var(--space-5);
+    font-size: 0.875rem;
+  }
+
+  .info-label {
+    color: var(--color-text-muted);
+    min-width: 140px;
+    font-size: var(--text-sm);
+  }
+
+  .info-value {
+    font-weight: var(--font-medium);
+    color: var(--color-text);
+    font-size: var(--text-sm);
+  }
+
+  .no-data {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    margin: 0;
+  }
+
+  @media (max-width: 640px) {
+    .customer-stats {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

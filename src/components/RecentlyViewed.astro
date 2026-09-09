@@ -1,0 +1,206 @@
+---
+/**
+ * RecentlyViewed.astro
+ * Muestra productos vistos recientemente (guardados en localStorage)
+ * 
+ * @see https://docs.astro.build/en/basics/astro-components/
+ */
+
+import ProductCard from './ProductCard.astro';
+import { supabase } from '../lib/supabase';
+
+interface Props {
+  excludeProductId?: string;
+  limit?: number;
+}
+
+const { excludeProductId, limit = 8 } = Astro.props;
+
+// Fetch all active products (will be filtered client-side by localStorage)
+const { data: allProducts } = await supabase
+  .from('products')
+  .select(`
+    id,
+    name,
+    slug,
+    price,
+    compare_price,
+    short_description,
+    images,
+    featured
+  `)
+  .eq('status', 'active')
+  .order('created_at', { ascending: false })
+  .limit(50);
+
+const productsJson = JSON.stringify(allProducts || []);
+---
+
+<section class="recently-viewed" id="recently-viewed-section" hidden>
+  <div class="section-header">
+    <h2 class="section-title">👀 Visto recientemente</h2>
+  </div>
+  <div class="products-grid" id="recently-viewed-grid">
+    <!-- Products rendered by JavaScript -->
+  </div>
+</section>
+
+<script define:vars={{ excludeProductId, limit, productsJson }}>
+  const allProducts = JSON.parse(productsJson);
+  
+  function getRecentlyViewed() {
+    try {
+      const stored = localStorage.getItem('recentlyViewed');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function addToRecentlyViewed(productId) {
+    const viewed = getRecentlyViewed();
+    const filtered = viewed.filter(id => id !== productId);
+    filtered.unshift(productId);
+    localStorage.setItem('recentlyViewed', JSON.stringify(filtered.slice(0, 20)));
+  }
+
+  function renderRecentlyViewed() {
+    const viewed = getRecentlyViewed();
+    if (viewed.length === 0) return;
+
+    const section = document.getElementById('recently-viewed-section');
+    const grid = document.getElementById('recently-viewed-grid');
+    if (!section || !grid) return;
+
+    // Filter products by viewed IDs, exclude current product
+    const products = viewed
+      .map(id => allProducts.find(p => p.id === id))
+      .filter(p => p && p.id !== excludeProductId)
+      .slice(0, limit);
+
+    if (products.length === 0) return;
+
+    products.forEach(product => {
+      const card = document.createElement('div');
+      card.className = 'product-card-wrapper';
+      card.innerHTML = `
+        <a href="/product/${product.slug}" class="product-link">
+          <div class="product-image-container">
+            <img
+              src="${product.images?.[0] || '/placeholder-product.svg'}"
+              alt="${product.name}"
+              class="product-image"
+              loading="lazy"
+              width="400"
+              height="400"
+            />
+          </div>
+          <div class="product-content">
+            <h3 class="product-name">${product.name}</h3>
+            <span class="product-price">$${product.price.toLocaleString()}</span>
+          </div>
+        </a>
+      `;
+      grid.appendChild(card);
+    });
+
+    section.hidden = false;
+  }
+
+  // Render on page load
+  renderRecentlyViewed();
+
+  // Expose function for product pages to call
+  window.addToRecentlyViewed = addToRecentlyViewed;
+</script>
+
+<style>
+  .recently-viewed {
+    margin-top: var(--space-16);
+    padding-top: var(--space-12);
+    border-top: 1px solid var(--color-border);
+  }
+
+  .section-header {
+    margin-bottom: var(--space-8);
+  }
+
+  .section-title {
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    font-weight: var(--font-bold);
+    color: var(--color-text);
+    margin: 0;
+  }
+
+  .products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: var(--space-6);
+  }
+
+  :global(.product-card-wrapper) {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    transition: all var(--transition-base);
+  }
+
+  :global(.product-card-wrapper:hover) {
+    border-color: var(--color-border-hover);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-4px);
+  }
+
+  :global(.product-card-wrapper .product-link) {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  :global(.product-card-wrapper .product-image-container) {
+    aspect-ratio: 1;
+    overflow: hidden;
+    background: var(--color-bg-secondary);
+  }
+
+  :global(.product-card-wrapper .product-image) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--transition-slow);
+  }
+
+  :global(.product-card-wrapper:hover .product-image) {
+    transform: scale(1.05);
+  }
+
+  :global(.product-card-wrapper .product-content) {
+    padding: var(--space-4);
+  }
+
+  :global(.product-card-wrapper .product-name) {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--color-text);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  :global(.product-card-wrapper .product-price) {
+    font-size: var(--text-base);
+    font-weight: var(--font-bold);
+    color: var(--color-primary);
+  }
+
+  @media (max-width: 640px) {
+    .products-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-4);
+    }
+  }
+</style>

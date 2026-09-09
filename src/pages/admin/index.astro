@@ -1,0 +1,180 @@
+---
+/**
+ * index.astro
+ * Dashboard temático "La cueva del Troll"
+ *
+ * @see https://docs.astro.build/en/basics/pages/
+ */
+
+export const prerender = false;
+
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { supabase } from '../../lib/supabase';
+
+// Obtener estadísticas
+const [
+  productsResult,
+  activeProducts,
+  ordersResult,
+  pendingOrders,
+  customersResult,
+  revenueResult,
+  lowStockResult,
+] = await Promise.all([
+  supabase.from('products').select('id', { count: 'exact', head: true }),
+  supabase.from('products').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+  supabase.from('orders').select('id', { count: 'exact', head: true }),
+  supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+  supabase.from('customers').select('id', { count: 'exact', head: true }),
+  supabase.from('orders').select('total').not('status', 'eq', 'cancelled'),
+  supabase.from('products').select('id, name, stock').lte('stock', 5).eq('status', 'active'),
+]);
+
+const totalRevenue = revenueResult.data?.reduce((sum: number, order: { total?: number }) => sum + (order.total || 0), 0) || 0;
+
+// Obtener pedidos recientes
+const { data: recentOrders } = await supabase
+  .from('orders')
+  .select(`
+    id,
+    status,
+    total,
+    created_at,
+    customers:customer_id ( full_name, email )
+  `)
+  .order('created_at', { ascending: false })
+  .limit(5);
+
+function formatPrice(price: number): string {
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+  }).format(price);
+}
+---
+
+<AdminLayout title="Dashboard">
+  <div class="page">
+    <!-- Page Header -->
+    <div class="page-header">
+      <div>
+        <h2 class="page-title">👹 Bienvenido a la cueva</h2>
+        <p class="page-subtitle">Resumen de tu reino y actividades recientes</p>
+      </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+      <a href="/admin/orders" class="stat-card">
+        <div class="stat-icon">💰</div>
+        <div class="stat-content">
+          <span class="stat-value">{formatPrice(totalRevenue)}</span>
+          <span class="stat-label">Botín total</span>
+        </div>
+      </a>
+
+      <a href="/admin/orders" class="stat-card">
+        <div class="stat-icon">🛒</div>
+        <div class="stat-content">
+          <span class="stat-value">{ordersResult.count || 0}</span>
+          <span class="stat-label">Pedidos</span>
+        </div>
+      </a>
+
+      <a href="/admin/customers" class="stat-card">
+        <div class="stat-icon">👥</div>
+        <div class="stat-content">
+          <span class="stat-value">{customersResult.count || 0}</span>
+          <span class="stat-label">Clientes guerreros</span>
+        </div>
+      </a>
+
+      <a href="/admin/products" class="stat-card">
+        <div class="stat-icon">⚔️</div>
+        <div class="stat-content">
+          <span class="stat-value">{activeProducts.count || 0}</span>
+          <span class="stat-label">Productos activos</span>
+        </div>
+      </a>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid-2">
+      <!-- Recent Orders -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">📋 Pedidos recientes</h3>
+        </div>
+        <div class="card-body">
+          {!recentOrders || recentOrders.length === 0 ? (
+            <div class="empty-state">
+              <p>No hay pedidos aún.</p>
+            </div>
+          ) : (
+            <div class="recent-orders-list">
+              {recentOrders.map((order) => (
+                <a href={`/admin/orders/${order.id}`} class="order-item">
+                  <div class="order-info">
+                    <span class="order-id">#{order.id.slice(0, 8)}</span>
+                    <span class="order-customer">{order.customers?.[0]?.full_name || 'Cliente'}</span>
+                  </div>
+                  <div class="order-price">{formatPrice(order.total || 0)}</div>
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <!-- Low Stock Alert -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">⚠️ Stock bajo</h3>
+        </div>
+        <div class="card-body">
+          {!lowStockResult.data || lowStockResult.data.length === 0 ? (
+            <div class="empty-state">
+              <p>Todos los productos tienen stock suficiente.</p>
+            </div>
+          ) : (
+            <div class="low-stock-list">
+              {lowStockResult.data.slice(0, 5).map((product) => (
+                <a href={`/admin/products/${product.id}/edit`} class="stock-item">
+                  <span class="product-name">{product.name}</span>
+                  <span class="stock-badge">{product.stock} unidades</span>
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">⚡ Acciones rápidas</h3>
+      </div>
+      <div class="card-body">
+        <div class="actions-grid">
+          <a href="/admin/products/new" class="action-btn">
+            <span class="action-icon">➕</span>
+            <span class="action-label">Nuevo producto</span>
+          </a>
+          <a href="/admin/orders" class="action-btn">
+            <span class="action-icon">📦</span>
+            <span class="action-label">Ver pedidos</span>
+          </a>
+          <a href="/admin/customers" class="action-btn">
+            <span class="action-icon">👥</span>
+            <span class="action-label">Clientes</span>
+          </a>
+          <a href="/admin/settings/payments" class="action-btn">
+            <span class="action-icon">💳</span>
+            <span class="action-label">Pagos</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</AdminLayout>

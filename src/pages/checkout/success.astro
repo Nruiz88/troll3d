@@ -1,0 +1,124 @@
+---
+/**
+ * success.astro
+ * Página de éxito después de completar el pago.
+ *
+ * @see https://docs.astro.build/en/basics/pages/
+ */
+
+import PageLayout from '../../layouts/PageLayout.astro';
+import { supabase } from '../../lib/supabase';
+
+const orderId = Astro.url.searchParams.get('order');
+const paymentId = Astro.url.searchParams.get('payment_id');
+const status = Astro.url.searchParams.get('status');
+
+// Update order status if we have an order ID
+if (orderId && status === 'approved') {
+  await supabase
+    .from('orders')
+    .update({ status: 'processing' })
+    .eq('id', orderId);
+}
+---
+
+<PageLayout
+  title="Pago exitoso | Tienda"
+  description="Tu pago fue procesado correctamente."
+>
+  <div class="success-container">
+    <div class="success-card">
+      <div class="success-icon">✅</div>
+      <h1>¡Pago exitoso!</h1>
+      <p class="success-message">
+        Tu pago fue procesado correctamente. Recibirás un email de confirmación en breve.
+      </p>
+
+      {orderId && (
+        <div class="order-info">
+          <p><strong>Número de pedido:</strong></p>
+          <p class="order-id">{orderId}</p>
+        </div>
+      )}
+
+      {paymentId && (
+        <div class="payment-info">
+          <p><strong>ID de pago:</strong></p>
+          <p class="payment-id">{paymentId}</p>
+        </div>
+      )}
+
+      <div class="success-actions">
+        <a href="/shop" class="btn-primary">Seguir comprando</a>
+      </div>
+    </div>
+  </div>
+</PageLayout>
+
+<style>
+  .success-container {
+    min-height: 60vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .success-card {
+    max-width: 500px;
+    text-align: center;
+    padding: var(--space-10);
+    background: #ffffff;
+    border-radius: var(--radius);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .success-icon {
+    font-size: 4rem;
+    margin-bottom: var(--space-5);
+  }
+
+  .success-card h1 {
+    margin: 0 0 var(--space-5);
+    color: #22c55e;
+  }
+
+  .success-message {
+    color: #666666;
+    margin-bottom: var(--space-8);
+  }
+
+  .order-info,
+  .payment-info {
+    padding: var(--space-5);
+    background: #f8f9fa;
+    border-radius: var(--radius);
+    margin-bottom: var(--space-5);
+  }
+
+  .order-id,
+  .payment-id {
+    font-family: monospace;
+    font-size: 1.125rem;
+    color: var(--color-primary);
+    margin: var(--space-4) 0 0;
+  }
+
+  .success-actions {
+    margin-top: var(--space-8);
+  }
+
+  .btn-primary {
+    display: inline-block;
+    padding: var(--space-4) var(--space-8);
+    background: var(--color-primary);
+    color: white;
+    text-decoration: none;
+    border-radius: var(--radius);
+    font-weight: 500;
+    transition: background-color 0.2s;
+  }
+
+  .btn-primary:hover {
+    background: var(--color-primary-hover);
+  }
+</style>

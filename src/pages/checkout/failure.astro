@@ -1,0 +1,88 @@
+---
+/**
+ * failure.astro
+ * Página de error en el pago.
+ *
+ * @see https://docs.astro.build/en/basics/pages/
+ */
+
+import PageLayout from '../../layouts/PageLayout.astro';
+
+---
+
+<PageLayout
+  title="Pago fallido | Tienda"
+  description="Hubo un problema con tu pago."
+>
+  <div class="result-container">
+    <div class="result-card">
+      <div class="result-icon">❌</div>
+      <h1>Pago no completado</h1>
+      <p class="result-message">
+        Hubo un problema al procesar tu pago. No se realizó ningún cargo.
+      </p>
+
+      <div class="result-actions">
+        <a href="/checkout" class="btn-primary">Intentar de nuevo</a>
+        <a href="/shop" class="btn-secondary">Volver a la tienda</a>
+      </div>
+    </div>
+  </div>
+</PageLayout>
+
+<style>
+  .result-container {
+    min-height: 60vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .result-card {
+    max-width: 500px;
+    text-align: center;
+    padding: var(--space-10);
+    background: #ffffff;
+    border-radius: var(--radius);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .result-icon {
+    font-size: 4rem;
+    margin-bottom: var(--space-5);
+  }
+
+  .result-card h1 {
+    margin: 0 0 var(--space-5);
+    color: #ef4444;
+  }
+
+  .result-message {
+    color: #666666;
+    margin-bottom: var(--space-8);
+  }
+
+  .result-actions {
+    display: flex;
+    gap: var(--space-5);
+    justify-content: center;
+  }
+
+  .btn-primary {
+    padding: var(--space-4) var(--space-8);
+    background: var(--color-primary);
+    color: white;
+    text-decoration: none;
+    border-radius: var(--radius);
+    font-weight: 500;
+  }
+
+  .btn-secondary {
+    padding: var(--space-4) var(--space-8);
+    background: #f3f4f6;
+    color: #374151;
+    text-decoration: none;
+    border-radius: var(--radius);
+    font-weight: 500;
+  }
+</style>

@@ -1,0 +1,485 @@
+---
+/**
+ * account/orders/[id].astro
+ * Detalle de un pedido específico
+ */
+
+export const prerender = false;
+
+import PageLayout from '../../../layouts/PageLayout.astro';
+
+const { id } = Astro.params;
+---
+
+<PageLayout title="Detalle del pedido" description="Información detallada de tu pedido.">
+
+  <div class="order-detail-container">
+    <!-- Header -->
+    <div class="page-header">
+      <a href="/account/orders" class="back-link">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        Volver a mis pedidos
+      </a>
+    </div>
+
+    <div class="order-content" id="order-content">
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Cargando pedido...</p>
+      </div>
+    </div>
+  </div>
+
+</PageLayout>
+
+<style>
+  .order-detail-container {
+    max-width: var(--container-lg);
+    margin: 0 auto;
+    padding: var(--space-8) var(--space-6);
+  }
+
+  .page-header {
+    margin-bottom: var(--space-8);
+  }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--color-text-muted);
+    text-decoration: none;
+    font-size: var(--text-sm);
+    transition: color var(--transition-fast);
+  }
+
+  .back-link:hover {
+    color: var(--color-primary);
+  }
+
+  /* Loading */
+  .loading-state {
+    text-align: center;
+    padding: var(--space-16);
+    color: var(--color-text-muted);
+  }
+
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--color-border);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto var(--space-4);
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* Order Layout */
+  .order-layout {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: var(--space-6);
+  }
+
+  /* Order Header */
+  .order-header {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-6);
+    margin-bottom: var(--space-6);
+  }
+
+  .order-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--space-4);
+  }
+
+  .order-id {
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    font-weight: var(--font-bold);
+    color: var(--color-text);
+    margin: 0;
+  }
+
+  .order-date {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    margin-top: var(--space-1);
+  }
+
+  .order-status-badge {
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-full);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+  }
+
+  /* Timeline */
+  .timeline {
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+    padding: var(--space-6) 0;
+  }
+
+  .timeline::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--color-border);
+    transform: translateY(-50%);
+  }
+
+  .timeline-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    position: relative;
+    z-index: 1;
+  }
+
+  .step-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--color-bg);
+    border: 2px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--text-sm);
+  }
+
+  .step-circle.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: white;
+  }
+
+  .step-label {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+  }
+
+  .step-circle.active + .step-label {
+    color: var(--color-primary);
+    font-weight: var(--font-medium);
+  }
+
+  /* Order Items */
+  .order-items-section {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-6);
+  }
+
+  .section-title {
+    font-size: var(--text-lg);
+    font-weight: var(--font-bold);
+    color: var(--color-text);
+    margin: 0 0 var(--space-6);
+  }
+
+  .order-item {
+    display: grid;
+    grid-template-columns: 60px 1fr auto;
+    gap: var(--space-4);
+    padding: var(--space-4);
+    background: var(--color-bg);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-3);
+  }
+
+  .item-image {
+    width: 60px;
+    height: 60px;
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-md);
+    object-fit: cover;
+  }
+
+  .item-details {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .item-name {
+    font-weight: var(--font-semibold);
+    color: var(--color-text);
+  }
+
+  .item-variant {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .item-price {
+    font-weight: var(--font-bold);
+    color: var(--color-text);
+    text-align: right;
+  }
+
+  .item-qty {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  /* Sidebar */
+  .order-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+
+  .sidebar-card {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-6);
+  }
+
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--space-2) 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+  }
+
+  .summary-row.total {
+    border-top: 1px solid var(--color-border);
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    font-size: var(--text-base);
+    font-weight: var(--font-bold);
+    color: var(--color-text);
+  }
+
+  .info-row {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .info-row:last-child {
+    border-bottom: none;
+  }
+
+  .info-label {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    min-width: 80px;
+  }
+
+  .info-value {
+    font-size: var(--text-sm);
+    color: var(--color-text);
+    font-weight: var(--font-medium);
+  }
+
+  @media (max-width: 900px) {
+    .order-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .timeline {
+      flex-wrap: wrap;
+      gap: var(--space-4);
+    }
+
+    .timeline::before {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  let supabase: any = null;
+
+  async function getSupabase() {
+    if (!supabase) {
+      const { createClient } = await import('@supabase/supabase-js');
+      supabase = createClient(
+        import.meta.env.PUBLIC_SUPABASE_URL,
+        import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+      );
+    }
+    return supabase;
+  }
+
+  async function loadOrder() {
+    const client = await getSupabase();
+    const { data: { user } } = await client.auth.getUser();
+    
+    if (!user) {
+      window.location.href = '/auth/login';
+      return;
+    }
+
+    const orderId = window.location.pathname.split('/').pop();
+
+    const { data: order, error } = await client
+      .from('orders')
+      .select('*')
+      .eq('id', orderId)
+      .eq('customer_id', user.id)
+      .single();
+
+    if (error || !order) {
+      document.getElementById('order-content')!.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">❌</div>
+          <h3>Pedido no encontrado</h3>
+          <a href="/account/orders">Volver a mis pedidos</a>
+        </div>
+      `;
+      return;
+    }
+
+    renderOrder(order);
+  }
+
+  function renderOrder(order: any) {
+    const statusSteps = ['pending', 'processing', 'shipped', 'delivered'];
+    const currentStepIndex = statusSteps.indexOf(order.status);
+
+    document.getElementById('order-content')!.innerHTML = `
+      <div class="order-header">
+        <div class="order-title-row">
+          <div>
+            <h1 class="order-id">Pedido #${order.id.slice(0, 8).toUpperCase()}</h1>
+            <p class="order-date">${new Date(order.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+          </div>
+          <span class="order-status-badge status-${order.status}">${getStatusText(order.status)}</span>
+        </div>
+        
+        <div class="timeline">
+          <div class="timeline-step">
+            <div class="step-circle ${currentStepIndex >= 0 ? 'active' : ''}">1</div>
+            <span class="step-label">Recibido</span>
+          </div>
+          <div class="timeline-step">
+            <div class="step-circle ${currentStepIndex >= 1 ? 'active' : ''}">2</div>
+            <span class="step-label">Procesando</span>
+          </div>
+          <div class="timeline-step">
+            <div class="step-circle ${currentStepIndex >= 2 ? 'active' : ''}">3</div>
+            <span class="step-label">Enviado</span>
+          </div>
+          <div class="timeline-step">
+            <div class="step-circle ${currentStepIndex >= 3 ? 'active' : ''}">4</div>
+            <span class="step-label">Entregado</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="order-layout">
+        <div class="order-items-section">
+          <h2 class="section-title">Artículos</h2>
+          ${(order.items || []).map((item: any) => `
+            <div class="order-item">
+              <img src="${item.image || '/placeholder-product.svg'}" alt="${item.name}" class="item-image" loading="lazy" />
+              <div class="item-details">
+                <span class="item-name">${item.name}</span>
+                ${item.variant ? `<span class="item-variant">${item.variant}</span>` : ''}
+              </div>
+              <div style="text-align: right;">
+                <div class="item-price">$${(item.price * item.quantity).toLocaleString()}</div>
+                <div class="item-qty">x${item.quantity}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="order-sidebar">
+          <div class="sidebar-card">
+            <h3 class="section-title">Resumen</h3>
+            <div class="summary-row">
+              <span>Subtotal</span>
+              <span>$${(order.subtotal || order.total).toLocaleString()}</span>
+            </div>
+            <div class="summary-row">
+              <span>Envío</span>
+              <span>${order.shipping_cost ? `$${order.shipping_cost.toLocaleString()}` : 'Gratis'}</span>
+            </div>
+            ${order.discount ? `
+              <div class="summary-row" style="color: var(--color-success);">
+                <span>Descuento</span>
+                <span>-$${order.discount.toLocaleString()}</span>
+              </div>
+            ` : ''}
+            <div class="summary-row total">
+              <span>Total</span>
+              <span>$${order.total.toLocaleString()}</span>
+            </div>
+          </div>
+
+          <div class="sidebar-card">
+            <h3 class="section-title">Envío</h3>
+            <div class="info-row">
+              <span class="info-label">Nombre</span>
+              <span class="info-value">${order.shipping_name || '-'}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Dirección</span>
+              <span class="info-value">${order.shipping_address || '-'}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Ciudad</span>
+              <span class="info-value">${order.shipping_city || '-'}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Teléfono</span>
+              <span class="info-value">${order.shipping_phone || '-'}</span>
+            </div>
+          </div>
+
+          <div class="sidebar-card">
+            <h3 class="section-title">Pago</h3>
+            <div class="info-row">
+              <span class="info-label">Método</span>
+              <span class="info-value">${order.payment_method || 'MercadoPago'}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Estado</span>
+              <span class="info-value" style="color: ${order.payment_status === 'paid' ? 'var(--color-success)' : 'var(--color-warning)'}">
+                ${order.payment_status === 'paid' ? 'Pagado' : 'Pendiente'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function getStatusText(status: string): string {
+    const statuses: Record<string, string> = {
+      pending: 'Pendiente',
+      processing: 'Procesando',
+      shipped: 'Enviado',
+      delivered: 'Entregado',
+      cancelled: 'Cancelado'
+    };
+    return statuses[status] || status;
+  }
+
+  loadOrder();
+</script>
