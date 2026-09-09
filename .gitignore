@@ -31,3 +31,10 @@ astro-check-output.txt
 # AI agent docs
 agents.md
 CLAUDE.md
+AGENTS.md
+
+# AI tooling (local only, no va al repo)
+.agents/
+.claude/
+.freebuff/
+.vscode/
