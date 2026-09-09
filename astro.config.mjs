@@ -1,6 +1,6 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
-import vercel from '@astrojs/vercel';
+import node from '@astrojs/node';
 import sitemap from '@astrojs/sitemap';
 import robotsTxt from 'astro-robots-txt';
 import partytown from '@astrojs/partytown';
@@ -18,10 +18,11 @@ export default defineConfig({
   // @see https://docs.astro.build/en/guides/routing/#server-ssr-mode
   output: 'static',
 
-  // Adapter para SSR en Vercel (serverless functions para páginas con prerender = false)
-  // sharp y @resvg/resvg-js funcionan en el runtime Node de Vercel (doc oficial)
-  // @see https://docs.astro.build/en/guides/deploy/vercel/
-  adapter: vercel(),
+  // Adapter Node standalone para Dokploy/Docker (SSR para páginas con prerender = false)
+  // @see https://docs.astro.build/en/guides/deploy/docker/
+  adapter: node({
+    mode: 'standalone',
+  }),
 
   // Configuración de imágenes remotas (Supabase Storage)
   // @see https://docs.astro.build/en/guides/images/#images-sources-remote-images
